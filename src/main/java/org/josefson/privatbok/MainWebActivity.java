@@ -2,66 +2,69 @@ package org.josefson.privatbok;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Message;
-import android.view.View;
+import android.util.Log;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.LinearLayout;
 import android.widget.Toast;
-
 
 public class MainWebActivity extends Activity {
 
-    private WebView mWebView1;
-    private WebView mWebView2;
+    public class JsObject {
+        private final WebView webView;
+        private final Activity activity;
+
+        public JsObject(final WebView webView, Activity activity) {
+            this.webView = webView;
+            this.activity = activity;
+        }
+
+        @JavascriptInterface
+        public void obtainGoogleAccessToken(final String callbackName) {
+            Log.d("JsObject", "obtainGoogleAccessToken");
+            returnResult(callbackName, "'Here it is!'");
+        }
+
+        private void returnResult(final String callbackName, final String result) {
+            activity.runOnUiThread(new Runnable() {
+                public void run() {
+                    final String js = callbackName + "(" + result + ");";
+                    System.out.println("js = " + js);
+                    webView.loadUrl("javascript:" + js);
+                }
+            });
+        }
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.main_web_layout);
-        mWebView1 = (WebView) (findViewById(R.id.webView1));
-        mWebView2 = (WebView) (findViewById(R.id.webView2));
+        final WebView webView = new WebView(this);
 
-//        mWebView1.getSettings().setAllowFileAccess(true);
-        mWebView1.getSettings().setDomStorageEnabled(true);
-        mWebView1.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
-        mWebView1.getSettings().setSupportMultipleWindows(true);
-//        mWebView1.getSettings().setLoadsImagesAutomatically(true); // enable image loading
-        mWebView1.getSettings().setJavaScriptEnabled(true); // enable javascript
+        webView.getSettings().setDomStorageEnabled(true);
+        webView.getSettings().setJavaScriptEnabled(true); // enable javascript
+        webView.addJavascriptInterface(new JsObject(webView, this), "android");
 
         final Activity activity = this;
-        final WebViewClient webViewClient = new WebViewClient() {
+        webView.setWebViewClient(new WebViewClient() {
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 Toast.makeText(activity, description, Toast.LENGTH_SHORT).show();
             }
-        };
-        mWebView1.setWebViewClient(webViewClient);
-
-        mWebView1.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onCreateWindow(WebView view, boolean dialog, boolean userGesture, Message resultMsg) {
-                Toast.makeText(activity, "onCreateWindow", Toast.LENGTH_SHORT).show();
-
-                mWebView1.setVisibility(View.INVISIBLE);
-                mWebView2.getSettings().setJavaScriptEnabled(true);
-                mWebView2.setWebChromeClient(this);
-                mWebView2.setWebViewClient(new WebViewClient());
-                mWebView1.getSettings().setDomStorageEnabled(true);
-                mWebView2.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.FILL_PARENT));
-                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
-                transport.setWebView(mWebView2);
-                resultMsg.sendToTarget();
-                return true;
-            }
         });
 
-        mWebView1.loadUrl("https://privatbok.meteor.com/");
-//        mWebView1.loadUrl("http://alterslash.org/");
+        webView.setWebChromeClient(new WebChromeClient() {
 
+        });
 
+//        webView.loadUrl("https://privatbok-develop.meteor.com/");
+//        webView.loadUrl("http://10.0.2.2:3000/");
+//        webView.loadUrl("http://alterslash.org/");
+        webView.loadUrl("http://jsbin.com/opuvas");
+
+        setContentView(webView);
     }
 
 }
